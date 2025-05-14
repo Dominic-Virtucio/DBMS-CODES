@@ -12,13 +12,9 @@ class CommuterRegisterDialog(QDialog):
         self.init_ui()
 
     def init_ui(self):
-        # Set the main background color
         self.setStyleSheet("background-color: #E3F2FD;")
-
         layout = QVBoxLayout()
         form_layout = QFormLayout()
-
-        # Form Fields
         self.username_input = QLineEdit()
         self.username_input.setStyleSheet("background-color: #BBDEFB;")
         self.password_input = QLineEdit()
@@ -30,31 +26,26 @@ class CommuterRegisterDialog(QDialog):
         self.last_name_input.setStyleSheet("background-color: #BBDEFB;")
         self.email_input = QLineEdit()
         self.email_input.setStyleSheet("background-color: #BBDEFB;")
-
-        # Add Rows with styled labels
         form_layout.addRow(self._make_label("Username*:"), self.username_input)
         form_layout.addRow(self._make_label("Password*:"), self.password_input)
         form_layout.addRow(self._make_label("First Name:"), self.first_name_input)
         form_layout.addRow(self._make_label("Last Name:"), self.last_name_input)
         form_layout.addRow(self._make_label("Email:"), self.email_input)
-
-        # Register Button
         register_btn = QPushButton("Register")
         register_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #2196F3;
-                color: white;
-                font-weight: bold;
-                border: none;
-                border-radius: 6px;
-                padding: 8px 0px;
-            }
-            QPushButton:hover {
-                background-color: #1976D2;
-            }
-        """)
+QPushButton {
+background-color: #2196F3;
+color: white;
+font-weight: bold;
+border: none;
+border-radius: 6px;
+padding: 8px 0px;
+}
+QPushButton:hover {
+background-color: #1976D2;
+}
+""")
         register_btn.clicked.connect(self.register_commuter)
-
         layout.addLayout(form_layout)
         layout.addWidget(register_btn)
         self.setLayout(layout)
@@ -72,12 +63,9 @@ class CommuterRegisterDialog(QDialog):
             'last_name': self.last_name_input.text().strip(),
             'email': self.email_input.text().strip()
         }
-
-        # Validation
         if not data['username'] or not data['password']:
             QMessageBox.warning(self, "Error", "Username and password are required")
             return
-
         try:
             self.db_manager.insert_commuter(
                 username=data['username'],
