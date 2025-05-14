@@ -11,7 +11,6 @@ from PyQt5.QtSql import (
 )
 
 def connect_to_database():
-    """Connect to the SQLite database using Qt SQL module."""
     db = QSqlDatabase.addDatabase("QSQLITE")
     db.setDatabaseName("transport_app.db")
     if not db.open():
@@ -23,17 +22,16 @@ def connect_to_database():
         return False
     return True
 
-# Call this before using any SQL models
 if not connect_to_database():
     raise SystemExit("Database connection failed.")
     
 class AdminPanel(QWidget):
     logout_requested = pyqtSignal()
 
-    def __init__(self, db_manager, user_data):  # Add user_data parameter
+    def __init__(self, db_manager, user_data):
         super().__init__()
         self.db_manager = db_manager
-        self.user_data = user_data  # Store user_data
+        self.user_data = user_data
         self.current_table = None
         self.models = {}
         self.views = {}
@@ -41,12 +39,10 @@ class AdminPanel(QWidget):
         self.init_ui()
         self.init_db_model()
 
-
     def init_ui(self):
         self.setStyleSheet("background-color: #F5F5F5;")
         main_layout = QVBoxLayout()
 
-        # Header
         header_layout = QHBoxLayout()
         self.user_label = QLabel("Admin Panel")
         self.user_label.setStyleSheet("color: #1976D2; font-weight: bold; font-size: 24px;")
@@ -62,7 +58,6 @@ class AdminPanel(QWidget):
         header_layout.addWidget(self.logout_button)
         main_layout.addLayout(header_layout)
 
-        # Table Selection Buttons
         tables = ["users", "admins", "drivers", "commuters", "conductors", 
                  "vehicles", "routes", "fares", "transactions", "feedbacks", 
                  "vehicle_assignment"]
@@ -79,13 +74,11 @@ class AdminPanel(QWidget):
             buttons_layout.addWidget(btn)
         main_layout.addLayout(buttons_layout)
 
-        # Table View
         self.table_view = QTableView()
         self.table_view.setEditTriggers(QTableView.DoubleClicked)
         self.table_view.setSelectionBehavior(QTableView.SelectRows)
         main_layout.addWidget(self.table_view)
 
-        # Control Buttons
         control_layout = QHBoxLayout()
         self.add_button = QPushButton("Add Row")
         self.add_button.setStyleSheet(self.logout_button.styleSheet())
@@ -124,15 +117,13 @@ class AdminPanel(QWidget):
             'fares': {'model_type': QSqlRelationalTableModel, 'relations': {
                 1: ('route_view', 'route_id', 'origin_to_destination')
             }},
-
             'transactions': {'model_type': QSqlRelationalTableModel, 'relations': {
                 1: ('commuters', 'commuter_id', 'commuter_id'),
-                2: ('route_view', 'route_id', 'origin_to_destination'),  # Use the view!
+                2: ('route_view', 'route_id', 'origin_to_destination'),
                 3: ('vehicles', 'vehicle_id', 'plate_no'),
                 4: ('conductors', 'conductor_id', 'conductor_id'),
                 5: ('fares', 'fare_id', 'price_fare')
             }},
-
             'feedbacks': {'model_type': QSqlRelationalTableModel, 'relations': {
                 1: ('commuters', 'commuter_id', 'commuter_id'),
                 2: ('drivers', 'driver_id', 'driver_id'),
@@ -160,11 +151,8 @@ class AdminPanel(QWidget):
     def show_table(self, table_name):
         self.current_table = table_name
         model = self.models[table_name]
-        
-        # Refresh the model data from the database
         model.select()
         print(f"Row count for {table_name}: {model.rowCount()}")
-        # Set headers to match relations
         for i in range(model.columnCount()):
             model.setHeaderData(i, Qt.Horizontal, model.headerData(i, Qt.Horizontal))
         
@@ -173,8 +161,6 @@ class AdminPanel(QWidget):
         self.table_view.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
     def get_id_from_relation(self, table, display_column, prompt):
-        """Helper to get foreign key ID from user selection"""
-        # Get primary key column name dynamically
         pk_column = {
             'vehicles': 'vehicle_id',
             'drivers': 'driver_id',
@@ -193,14 +179,12 @@ class AdminPanel(QWidget):
         
         return data[items.index(item)][1] if ok and item else None
 
-
     def add_row(self):
         if not self.current_table:
             return
     
         try:
             if self.current_table == "vehicle_assignment":
-                # Prompt for vehicle plate, driver license, and conductor license
                 vehicle_plate, ok = QInputDialog.getText(
                     self, "Vehicle Assignment", "Enter Vehicle Plate Number:"
                 )
@@ -219,19 +203,16 @@ class AdminPanel(QWidget):
                 if not ok or not conductor_license:
                     return
     
-                # Lookup IDs
                 vehicle_id = self.db_manager.get_vehicle_id_by_plate(vehicle_plate)
                 driver_id = self.db_manager.get_driver_id_by_license(driver_license)
                 conductor_id = self.db_manager.get_conductor_id_by_license(conductor_license)
     
-                # Debug: Print fetched IDs
                 print(f"Fetched IDs - Vehicle: {vehicle_id}, Driver: {driver_id}, Conductor: {conductor_id}")
     
                 if not all([vehicle_id, driver_id, conductor_id]):
                     QMessageBox.warning(self, "Error", "Invalid license/plate number(s)")
                     return
     
-                # Create and insert record
                 model = self.models[self.current_table]
                 record = model.record()
                 record.setValue("vehicle_id", str(vehicle_id))
@@ -239,12 +220,10 @@ class AdminPanel(QWidget):
                 record.setValue("conductor_id", str(conductor_id))
                 record.setValue("assignment_date", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     
-                # With this improved version:
                 if model.insertRecord(-1, record):
                     if model.submitAll():
                         QMessageBox.information(self, "Success", "Assignment added successfully!")
-                        # Force a complete refresh of the table
-                        self.show_table("vehicle_assignment")  # Re-show the same table to force refresh
+                        self.show_table("vehicle_assignment")
                     else:
                         error = model.lastError().text()
                         print(f"Database Error: {error}")
@@ -263,7 +242,6 @@ class AdminPanel(QWidget):
             QMessageBox.critical(self, "Error", f"Operation failed: {str(e)}")
 
     def create_user(self, username, password, user_type, first_name="", last_name="", email=""):
-        """Base method to create a user (no transaction handling)"""
         cursor = self.conn.cursor()
         cursor.execute('''
             INSERT INTO users 
@@ -273,29 +251,21 @@ class AdminPanel(QWidget):
         return cursor.lastrowid
         
     def create_driver(self, username, password, license_no, **user_info):
-        """Create a driver with proper transaction handling"""
         try:
             self.begin_transaction()
             cursor = self.conn.cursor()
-            
-            # Insert into users
             user_id = self.create_user(
                 username, password, 'Driver',
                 user_info.get('first_name', ''),
                 user_info.get('last_name', ''),
                 user_info.get('email', '')
             )
-            
-            # Generate driver ID
             driver_id = f"D{user_id}"
-            
-            # Insert into drivers
             cursor.execute('''
                 INSERT INTO drivers 
                 (driver_id, user_id, license_no)
                 VALUES (?, ?, ?)
             ''', (driver_id, user_id, license_no))
-            
             self.commit_transaction()
             return driver_id
         except Exception as e:
@@ -306,21 +276,18 @@ class AdminPanel(QWidget):
         try:
             self.begin_transaction()
             cursor = self.conn.cursor()
-            
             user_id = self.create_user(
                 username, password, 'Conductor',
                 user_info.get('first_name', ''),
                 user_info.get('last_name', ''),
                 user_info.get('email', '')
             )
-            
             conductor_id = f"C{user_id}"
             cursor.execute('''
                 INSERT INTO conductors 
                 (conductor_id, user_id, license_no)
                 VALUES (?, ?, ?)
             ''', (conductor_id, user_id, license_no))
-            
             self.commit_transaction()
             return conductor_id
         except Exception as e:
@@ -331,49 +298,10 @@ class AdminPanel(QWidget):
         try:
             self.begin_transaction()
             cursor = self.conn.cursor()
-            
             user_id = self.create_user(
                 username, password, 'Admin',
                 user_info.get('first_name', ''),
                 user_info.get('last_name', ''),
                 user_info.get('email', '')
             )
-            
             admin_id = f"A{user_id}"
-            cursor.execute('''
-                INSERT INTO admins 
-                (admin_id, user_id, role)
-                VALUES (?, ?, ?)
-            ''', (admin_id, user_id, role))
-            
-            self.commit_transaction()
-            return admin_id
-        except Exception as e:
-            self.rollback_transaction()
-            raise ValueError(f"Admin creation failed: {str(e)}")
-
-    def delete_row(self):
-        if not self.current_table:
-            return
-
-        try:
-            model = self.models[self.current_table]
-            current_row = self.table_view.currentIndex().row()
-            if current_row >= 0:
-                model.removeRow(current_row)
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to delete row: {str(e)}")
-
-    def save_changes(self):
-        if not self.current_table:
-            return
-
-        model = self.models[self.current_table]
-        if model.submitAll():
-            model.select()
-            QMessageBox.information(self, "Success", "Changes saved successfully")
-        else:
-            error = model.lastError().text()
-            if self.current_table == "vehicle_assignment":
-                error += "\nEnsure you selected valid Vehicle, Driver, and Conductor"
-            QMessageBox.critical(self, "Error", f"Save failed:\n{error}")
