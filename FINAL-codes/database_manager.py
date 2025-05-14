@@ -61,7 +61,6 @@ class DatabaseManager:
                 self.conn.rollback()
             return False
 
-    # Transaction methods: FIXED to use self.conn
     def begin_transaction(self):
         self.ensure_connection()
         self.conn.execute("BEGIN TRANSACTION")
@@ -73,7 +72,7 @@ class DatabaseManager:
         except sqlite3.Error as e:
             print(f"Commit error: {e}")
             raise
-    
+
     def rollback_transaction(self):
         try:
             self.conn.rollback()
@@ -81,9 +80,7 @@ class DatabaseManager:
         except sqlite3.Error as e:
             print(f"Rollback error: {e}")
             raise
-    
 
-    # --- General Data Retrieval ---
     def get_users(self):
         return self.execute_query("SELECT * FROM users")
 
@@ -111,7 +108,6 @@ class DatabaseManager:
     def get_routes(self):
         return self.execute_query("SELECT route_id, origin, destination FROM routes")
 
-
     def get_fares(self):
         return self.execute_query("SELECT f.*, r.origin, r.destination FROM fares f JOIN routes r ON f.route_id = r.route_id")
 
@@ -134,7 +130,6 @@ class DatabaseManager:
             LEFT JOIN conductors k ON f.conductor_id = k.conductor_id
         """)
 
-    # --- User-specific Data ---
     def get_commuter_data(self, user_id):
         return self.execute_query("""
             SELECT c.*, u.username, u.first_name, u.last_name, u.email, u.password
@@ -172,7 +167,6 @@ class DatabaseManager:
             LEFT JOIN conductors k ON t.conductor_id = k.conductor_id
             WHERE t.commuter_id = ?
         """, (commuter_id,))
-    
 
     def get_driver_feedbacks(self, driver_id):
         return self.execute_query("""
@@ -181,15 +175,10 @@ class DatabaseManager:
             WHERE f.driver_id = ?
             ORDER BY f.feedback_id
         """, (driver_id,))
-        
+
     def get_conductor_feedbacks(self, conductor_id):
         return self.execute_query("""
-            SELECT
-                f.feedback_id,
-                f.commuter_id,
-                f.rating,
-                f.comment,
-                datetime('now') AS feedback_date
+            SELECT f.feedback_id, f.commuter_id, f.rating, f.comment, datetime('now') AS feedback_date
             FROM feedbacks f
             WHERE f.conductor_id = ?
             ORDER BY f.feedback_id
@@ -197,33 +186,27 @@ class DatabaseManager:
 
     def get_conductor_transactions(self, conductor_id):
         return self.execute_query("""
-            SELECT 
-                t.transaction_id,
-                t.commuter_id,
-                t.route_id AS Route,
-                v.plate_no AS "Vehicle Plate",
-                t.total_fare,
-                t.transaction_date AS Date
+            SELECT t.transaction_id, t.commuter_id, t.route_id AS Route, v.plate_no AS "Vehicle Plate", t.total_fare, t.transaction_date AS Date
             FROM transactions t
             LEFT JOIN vehicles v ON t.vehicle_id = v.vehicle_id
             WHERE t.conductor_id = ?
             ORDER BY t.transaction_date DESC
         """, (conductor_id,))
-        
+
     def get_vehicle_id_by_plate(self, plate_no):
         result = self.execute_query(
             "SELECT vehicle_id FROM vehicles WHERE LOWER(plate_no) = LOWER(?)",
             (plate_no.strip(),)
         )
         return result[0]['vehicle_id'] if result else None
-    
+
     def get_driver_id_by_license(self, license_no):
         result = self.execute_query(
             "SELECT driver_id FROM drivers WHERE license_no = ?",
             (license_no.strip(),)
         )
         return result[0]['driver_id'] if result else None
-    
+
     def get_conductor_id_by_license(self, license_no):
         result = self.execute_query(
             "SELECT conductor_id FROM conductors WHERE license_no = ?",
@@ -231,7 +214,6 @@ class DatabaseManager:
         )
         return result[0]['conductor_id'] if result else None
 
-    # --- Dropdown helpers ---
     def get_all_commuter_ids(self):
         return self.execute_query("SELECT commuter_id FROM commuters")
 
@@ -271,7 +253,6 @@ class DatabaseManager:
         result = self.execute_query("SELECT conductor_id FROM conductors WHERE user_id = ?", (user_id,))
         return result[0]['conductor_id'] if result else None
 
-    # --- Registration and Authentication ---
     def get_commuter_by_username(self, username):
         if not self.ensure_connection():
             return None
@@ -283,16 +264,10 @@ class DatabaseManager:
             WHERE u.username = ?
         """, (username,))
         return cursor.fetchone()
-    
+
     def get_commuter_feedbacks(self, commuter_id):
         return self.execute_query("""
-            SELECT 
-                f.feedback_id,
-                f.driver_id,
-                f.conductor_id, 
-                f.rating,
-                f.comment,
-                datetime('now') AS date
+            SELECT f.feedback_id, f.driver_id, f.conductor_id, f.rating, f.comment, datetime('now') AS date
             FROM feedbacks f
             WHERE f.commuter_id = ?
             ORDER BY f.feedback_id DESC
@@ -313,15 +288,12 @@ class DatabaseManager:
     def insert_commuter(self, username, password, first_name, last_name, email):
         cursor = self.conn.cursor()
         try:
-            # Insert into users
             cursor.execute('''
-                INSERT INTO users 
+                INSERT INTO users
                 (username, password, first_name, last_name, email, user_type)
                 VALUES (?, ?, ?, ?, ?, 'Commuter')
             ''', (username, password, first_name, last_name, email))
             user_id = cursor.lastrowid
-            
-            # Insert into commuters with the same user_id
             cursor.execute('''
                 INSERT INTO commuters (user_id)
                 VALUES (?)
@@ -331,12 +303,10 @@ class DatabaseManager:
         except sqlite3.IntegrityError:
             raise ValueError("Username already exists")
 
-
     def authenticate_user(self, username, password):
         cursor = self.conn.cursor()
-        # Unified query for all user types
         cursor.execute('''
-            SELECT u.*, 
+            SELECT u.*,
                 c.commuter_id, c.contact_no, c.discount_type,
                 d.driver_id, d.license_no,
                 k.conductor_id,
@@ -350,7 +320,7 @@ class DatabaseManager:
         ''', (username, password))
         user = cursor.fetchone()
         return dict(user) if user else None
-    
+
     def get_fares_with_routes(self):
         return self.execute_query("""
             SELECT
@@ -365,10 +335,3 @@ class DatabaseManager:
             JOIN routes r ON f.route_id = r.route_id
             ORDER BY f.fare_id
         """)
-        
-      
-
-        
-
-
-
