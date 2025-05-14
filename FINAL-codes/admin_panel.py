@@ -1,12 +1,32 @@
+import sqlite3
+from datetime import datetime
+
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, 
     QTableView, QMessageBox, QInputDialog, QHeaderView
 )
 from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtSql import ( QSqlRelationalTableModel, QSqlRelation, QSqlTableModel
+from PyQt5.QtSql import (
+    QSqlDatabase, QSqlRelationalTableModel, QSqlRelation, QSqlTableModel
 )
-DATABASE_NAME = "transport_app.db"
 
+def connect_to_database():
+    """Connect to the SQLite database using Qt SQL module."""
+    db = QSqlDatabase.addDatabase("QSQLITE")
+    db.setDatabaseName("transport_app.db")
+    if not db.open():
+        QMessageBox.critical(
+            None,
+            "Database Connection Error",
+            f"Unable to establish a database connection:\n{db.lastError().text()}"
+        )
+        return False
+    return True
+
+# Call this before using any SQL models
+if not connect_to_database():
+    raise SystemExit("Database connection failed.")
+    
 class AdminPanel(QWidget):
     logout_requested = pyqtSignal()
 
@@ -357,5 +377,3 @@ class AdminPanel(QWidget):
             if self.current_table == "vehicle_assignment":
                 error += "\nEnsure you selected valid Vehicle, Driver, and Conductor"
             QMessageBox.critical(self, "Error", f"Save failed:\n{error}")
-            
-        
