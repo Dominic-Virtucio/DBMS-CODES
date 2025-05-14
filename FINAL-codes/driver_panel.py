@@ -22,8 +22,6 @@ class DriverPanel(QWidget):
 
     def init_ui(self):
         main_layout = QVBoxLayout()
-
-        # Header
         header_layout = QHBoxLayout()
         self.user_label = QLabel(f"Logged in as: Driver ({self.user_data.get('username', 'N/A')})")
         self.user_label.setStyleSheet("color: #1976D2; font-weight: bold; font-size: 16px;")
@@ -37,7 +35,6 @@ class DriverPanel(QWidget):
         header_layout.addWidget(self.logout_button)
         main_layout.addLayout(header_layout)
 
-        # Driver Information Group
         driver_info_group = QGroupBox("My Information")
         driver_info_group.setStyleSheet("QGroupBox { color: #0D2240; font-weight: bold; }")
         driver_info_layout = QFormLayout()
@@ -52,7 +49,6 @@ class DriverPanel(QWidget):
         driver_info_group.setLayout(driver_info_layout)
         main_layout.addWidget(driver_info_group)
 
-        # Assigned Vehicle Group
         vehicle_group = QGroupBox("Assigned Vehicle")
         vehicle_group.setStyleSheet("QGroupBox { color: #1976D2; font-weight: bold; }")
         vehicle_layout = QFormLayout()
@@ -63,12 +59,9 @@ class DriverPanel(QWidget):
         vehicle_group.setLayout(vehicle_layout)
         main_layout.addWidget(vehicle_group)
 
-        # Data Views Section
         data_views_group = QGroupBox("Data Views")
         data_views_group.setStyleSheet("QGroupBox { color: #1976D2; font-weight: bold; }")
         data_views_layout = QVBoxLayout()
-
-        # Route and Fare Details Table (merged)
         fares_label = QLabel("Route and Fare Details:")
         fares_label.setStyleSheet("color: #1976D2; font-weight: bold;")
         data_views_layout.addWidget(fares_label)
@@ -79,10 +72,8 @@ class DriverPanel(QWidget):
         self.fares_table.horizontalHeader().setStyleSheet(
             "QHeaderView::section { background-color: #1976D2; color: white; font-weight: bold; }"
         )
-        self.fares_table.verticalHeader().setVisible(False)  # Remove numbers on the left
+        self.fares_table.verticalHeader().setVisible(False)
         data_views_layout.addWidget(self.fares_table)
-
-        # Feedbacks Table
         feedbacks_label = QLabel("Feedback for Me:")
         feedbacks_label.setStyleSheet("color: #1976D2; font-weight: bold;")
         data_views_layout.addWidget(feedbacks_label)
@@ -93,9 +84,8 @@ class DriverPanel(QWidget):
         self.feedbacks_table.horizontalHeader().setStyleSheet(
             "QHeaderView::section { background-color: #1976D2; color: white; font-weight: bold; }"
         )
-        self.feedbacks_table.verticalHeader().setVisible(False)  # Remove numbers on the left
+        self.feedbacks_table.verticalHeader().setVisible(False)
         data_views_layout.addWidget(self.feedbacks_table)
-
         data_views_group.setLayout(data_views_layout)
         main_layout.addWidget(data_views_group)
         self.setLayout(main_layout)
@@ -130,7 +120,7 @@ class DriverPanel(QWidget):
         self.populate_table_view(
             self.feedbacks_table_model,
             feedbacks,
-            ["Feedback ID", "Commuter ID", "Rating", "Comment"] 
+            ["Feedback ID", "Commuter ID", "Rating", "Comment"]
         )
         self.resize_table_view_uniform(self.feedbacks_table)
 
@@ -142,10 +132,8 @@ class DriverPanel(QWidget):
                 items = []
                 for i, header in enumerate(headers):
                     value = row_data[i]
-                    # Format Distance
                     if header == "Distance":
                         value = f"{value} km"
-                    # Format Price and Discount Price
                     elif header in ("Price", "Discount Price"):
                         value = f"₱{value}"
                     item = QStandardItem(str(value))
