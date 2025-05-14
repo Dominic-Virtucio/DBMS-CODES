@@ -1,79 +1,158 @@
 from PyQt5.QtWidgets import (
-    QDialog, QFormLayout, QLineEdit,
-    QPushButton, QMessageBox, QVBoxLayout, QLabel
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
+    QTableView, QFormLayout, QGroupBox, QHeaderView
 )
+from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtGui import QStandardItemModel, QStandardItem
 
-class CommuterRegisterDialog(QDialog):
-    def __init__(self, db_manager):
+class ConductorPanel(QWidget):
+    logout_requested = pyqtSignal()
+
+    def __init__(self, db_manager, user_data):
         super().__init__()
         self.db_manager = db_manager
-        self.setWindowTitle("Commuter Registration")
-        self.setFixedSize(400, 300)
+        self.user_data = user_data
+        self.conductor_id = self.user_data.get('conductor_id')
+        self.setWindowTitle("Conductor Panel")
         self.init_ui()
+        self.load_conductor_data()
+        self.load_assigned_vehicle()
+        self.load_transactions()
+        self.load_feedbacks()
 
     def init_ui(self):
-        self.setStyleSheet("background-color: #E3F2FD;")
-        layout = QVBoxLayout()
-        form_layout = QFormLayout()
-        self.username_input = QLineEdit()
-        self.username_input.setStyleSheet("background-color: #BBDEFB;")
-        self.password_input = QLineEdit()
-        self.password_input.setEchoMode(QLineEdit.Password)
-        self.password_input.setStyleSheet("background-color: #BBDEFB;")
-        self.first_name_input = QLineEdit()
-        self.first_name_input.setStyleSheet("background-color: #BBDEFB;")
-        self.last_name_input = QLineEdit()
-        self.last_name_input.setStyleSheet("background-color: #BBDEFB;")
-        self.email_input = QLineEdit()
-        self.email_input.setStyleSheet("background-color: #BBDEFB;")
-        form_layout.addRow(self._make_label("Username*:"), self.username_input)
-        form_layout.addRow(self._make_label("Password*:"), self.password_input)
-        form_layout.addRow(self._make_label("First Name:"), self.first_name_input)
-        form_layout.addRow(self._make_label("Last Name:"), self.last_name_input)
-        form_layout.addRow(self._make_label("Email:"), self.email_input)
-        register_btn = QPushButton("Register")
-        register_btn.setStyleSheet("""
-QPushButton {
-background-color: #2196F3;
-color: white;
-font-weight: bold;
-border: none;
-border-radius: 6px;
-padding: 8px 0px;
-}
-QPushButton:hover {
-background-color: #1976D2;
-}
-""")
-        register_btn.clicked.connect(self.register_commuter)
-        layout.addLayout(form_layout)
-        layout.addWidget(register_btn)
-        self.setLayout(layout)
+        main_layout = QVBoxLayout()
+        header_layout = QHBoxLayout()
+        self.user_label = QLabel(f"Logged in as: Conductor ({self.user_data.get('username', 'N/A')})")
+        self.user_label.setStyleSheet("color: #1976D2; font-weight: bold; font-size: 16px;")
+        header_layout.addWidget(self.user_label)
+        header_layout.addStretch()
+        self.logout_button = QPushButton("Logout")
+        self.logout_button.setStyleSheet(
+            "background-color: #2196F3; color: white; font-weight: bold; border-radius: 5px; padding: 7px 18px;"
+        )
+        self.logout_button.clicked.connect(self.logout_requested.emit)
+        header_layout.addWidget(self.logout_button)
+        main_layout.addLayout(header_layout)
 
-    def _make_label(self, text):
-        label = QLabel(text)
-        label.setStyleSheet("color: #1976D2; font-weight: bold;")
-        return label
+        conductor_info_group = QGroupBox("My Information")
+        conductor_info_group.setStyleSheet("QGroupBox { color: #1976D2; font-weight: bold; }")
+        conductor_info_layout = QFormLayout()
+        self.username_value = QLabel()
+        conductor_info_layout.addRow(QLabel("Username:"), self.username_value)
+        self.name_value = QLabel()
+        conductor_info_layout.addRow(QLabel("Name:"), self.name_value)
+        self.email_value = QLabel()
+        conductor_info_layout.addRow(QLabel("Email:"), self.email_value)
+        self.license_value = QLabel()
+        conductor_info_layout.addRow(QLabel("License No:"), self.license_value)
+        conductor_info_group.setLayout(conductor_info_layout)
+        main_layout.addWidget(conductor_info_group)
 
-    def register_commuter(self):
-        data = {
-            'username': self.username_input.text().strip(),
-            'password': self.password_input.text().strip(),
-            'first_name': self.first_name_input.text().strip(),
-            'last_name': self.last_name_input.text().strip(),
-            'email': self.email_input.text().strip()
-        }
-        if not data['username'] or not data['password']:
-            QMessageBox.warning(self, "Error", "Username and password are required")
+        vehicle_group = QGroupBox("Assigned Vehicle")
+        vehicle_group.setStyleSheet("QGroupBox { color: #1976D2; font-weight: bold; }")
+        vehicle_layout = QFormLayout()
+        self.vehicle_id_value = QLabel("N/A")
+        vehicle_layout.addRow(QLabel("Vehicle ID:"), self.vehicle_id_value)
+        self.plate_no_value = QLabel("N/A")
+        vehicle_layout.addRow(QLabel("Plate No:"), self.plate_no_value)
+        vehicle_group.setLayout(vehicle_layout)
+        main_layout.addWidget(vehicle_group)
+
+        data_views_group = QGroupBox("Trip Information")
+        data_views_group.setStyleSheet("QGroupBox { color: #1976D2; font-weight: bold; }")
+        data_views_layout = QVBoxLayout()
+
+        transactions_label = QLabel("Transactions Handled:")
+        transactions_label.setStyleSheet("color: #1976D2; font-weight: bold;")
+        data_views_layout.addWidget(transactions_label)
+        self.transactions_table = QTableView()
+        self.transactions_table_model = QStandardItemModel()
+        self.transactions_table.setModel(self.transactions_table_model)
+        self.transactions_table.setEditTriggers(QTableView.NoEditTriggers)
+        self.transactions_table.horizontalHeader().setStyleSheet(
+            "QHeaderView::section { background-color: #1976D2; color: white; font-weight: bold; }"
+        )
+        self.transactions_table.verticalHeader().setVisible(False)
+        data_views_layout.addWidget(self.transactions_table)
+
+        feedbacks_label = QLabel("Feedback for Me:")
+        feedbacks_label.setStyleSheet("color: #1976D2; font-weight: bold;")
+        data_views_layout.addWidget(feedbacks_label)
+        self.feedbacks_table = QTableView()
+        self.feedbacks_table_model = QStandardItemModel()
+        self.feedbacks_table.setModel(self.feedbacks_table_model)
+        self.feedbacks_table.setEditTriggers(QTableView.NoEditTriggers)
+        self.feedbacks_table.horizontalHeader().setStyleSheet(
+            "QHeaderView::section { background-color: #1976D2; color: white; font-weight: bold; }"
+        )
+        self.feedbacks_table.verticalHeader().setVisible(False)
+        data_views_layout.addWidget(self.feedbacks_table)
+
+        data_views_group.setLayout(data_views_layout)
+        main_layout.addWidget(data_views_group)
+        self.setLayout(main_layout)
+
+    def load_conductor_data(self):
+        self.username_value.setText(self.user_data.get('username', 'N/A'))
+        self.name_value.setText(f"{self.user_data.get('first_name', '')} {self.user_data.get('last_name', '')}")
+        self.email_value.setText(self.user_data.get('email', ''))
+        self.license_value.setText(str(self.user_data.get('license_no', 'N/A')))
+
+    def load_assigned_vehicle(self):
+        vehicle_id = self.user_data.get('vehicle_id')
+        plate_no = self.user_data.get('plate_no')
+        if vehicle_id:
+            self.vehicle_id_value.setText(str(vehicle_id))
+            self.plate_no_value.setText(str(plate_no))
+        else:
+            self.vehicle_id_value.setText("Not Assigned")
+            self.plate_no_value.setText("Not Assigned")
+
+    def load_transactions(self):
+        transactions = self.db_manager.get_conductor_transactions(self.conductor_id)
+        headers = ["Transaction ID", "Commuter ID", "Route", "Vehicle Plate", "Total Fare", "Date"]
+        self.populate_table_view(self.transactions_table_model, transactions, headers)
+        self.resize_table_view_uniform(self.transactions_table)
+
+    def load_feedbacks(self):
+        feedbacks = self.db_manager.get_conductor_feedbacks(self.conductor_id)
+        self.populate_table_view(
+            self.feedbacks_table_model,
+            feedbacks,
+            ["Feedback ID", "Commuter ID", "Rating", "Comment", "Date"]
+        )
+        self.resize_table_view_uniform(self.feedbacks_table)
+
+    def populate_table_view(self, model, data, headers):
+        model.clear()
+        model.setHorizontalHeaderLabels(headers)
+        if data:
+            for row_data in data:
+                items = []
+                for i, header in enumerate(headers):
+                    if i < len(row_data):
+                        value = row_data[i]
+                        if header == "Total Fare":
+                            value = f"₱{value}"
+                        if header == "Date" and value:
+                            try:
+                                from datetime import datetime
+                                date_obj = datetime.strptime(str(value), "%Y-%m-%d %H:%M:%S")
+                                value = date_obj.strftime("%Y-%m-%d %H:%M")
+                            except:
+                                pass
+                        item = QStandardItem(str(value))
+                        item.setTextAlignment(Qt.AlignCenter)
+                        items.append(item)
+                    else:
+                        items.append(QStandardItem(""))
+                model.appendRow(items)
+
+    def resize_table_view_uniform(self, table_view):
+        header = table_view.horizontalHeader()
+        column_count = table_view.model().columnCount()
+        if column_count == 0:
             return
-        try:
-            self.db_manager.insert_commuter(
-                username=data['username'],
-                password=data['password'],
-                first_name=data['first_name'],
-                last_name=data['last_name'],
-                email=data['email']
-            )
-            self.accept()
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Registration failed: {str(e)}")
+        for col in range(column_count):
+            header.setSectionResizeMode(col, QHeaderView.Stretch)
