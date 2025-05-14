@@ -4,7 +4,6 @@ DATABASE_NAME = 'transport_app.db'
 
 def create_tables(conn):
     cursor = conn.cursor()
-
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS users (
         user_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -16,7 +15,6 @@ def create_tables(conn):
         user_type VARCHAR NOT NULL CHECK(user_type IN ('Admin', 'Commuter', 'Driver', 'Conductor'))
     )
     ''')
-
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS admins (
         admin_id VARCHAR PRIMARY KEY,
@@ -25,7 +23,6 @@ def create_tables(conn):
         FOREIGN KEY (user_id) REFERENCES users(user_id)
     )
     ''')
-
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS drivers (
         driver_id VARCHAR PRIMARY KEY,
@@ -34,7 +31,6 @@ def create_tables(conn):
         FOREIGN KEY(user_id) REFERENCES users(user_id)
     )
     ''')
-
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS commuters (
         commuter_id VARCHAR PRIMARY KEY,
@@ -46,7 +42,6 @@ def create_tables(conn):
         FOREIGN KEY(preferred_route) REFERENCES routes(route_id)
     )
     ''')
-
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS conductors (
         conductor_id VARCHAR PRIMARY KEY,
@@ -55,14 +50,12 @@ def create_tables(conn):
         FOREIGN KEY(user_id) REFERENCES users(user_id)
     )
     ''')
-
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS vehicles (
         vehicle_id VARCHAR PRIMARY KEY,
         plate_no VARCHAR UNIQUE NOT NULL
     )
     ''')
-
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS routes (
         route_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -71,7 +64,6 @@ def create_tables(conn):
         distance REAL NOT NULL
     )
     ''')
-
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS fares (
         fare_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -81,7 +73,6 @@ def create_tables(conn):
         FOREIGN KEY (route_id) REFERENCES routes(route_id)
     )
     ''')
-
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS transactions (
         transaction_id VARCHAR PRIMARY KEY,
@@ -99,7 +90,6 @@ def create_tables(conn):
         FOREIGN KEY (fare_id) REFERENCES fares(fare_id)
     )
     ''')
-
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS feedbacks (
         feedback_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -113,36 +103,33 @@ def create_tables(conn):
         FOREIGN KEY (conductor_id) REFERENCES conductors(conductor_id)
     )
     ''')
-
     cursor.execute('''
-        CREATE TABLE vehicle_assignment (
-            assignment_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            vehicle_id VARCHAR NOT NULL,
-            driver_id VARCHAR NOT NULL,
-            conductor_id VARCHAR NOT NULL,
-            assignment_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY(vehicle_id) REFERENCES vehicles(vehicle_id),
-            FOREIGN KEY(driver_id) REFERENCES drivers(driver_id),
-            FOREIGN KEY(conductor_id) REFERENCES conductors(conductor_id)
-        )
+    CREATE TABLE vehicle_assignment (
+        assignment_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        vehicle_id VARCHAR NOT NULL,
+        driver_id VARCHAR NOT NULL,
+        conductor_id VARCHAR NOT NULL,
+        assignment_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(vehicle_id) REFERENCES vehicles(vehicle_id),
+        FOREIGN KEY(driver_id) REFERENCES drivers(driver_id),
+        FOREIGN KEY(conductor_id) REFERENCES conductors(conductor_id)
+    )
     ''')
-    
     cursor.execute('''
-        CREATE VIEW IF NOT EXISTS route_view AS
-        SELECT 
-            route_id, 
-            origin || ' to ' || destination AS origin_to_destination
-        FROM routes
+    CREATE VIEW IF NOT EXISTS route_view AS
+    SELECT
+        route_id,
+        origin || ' to ' || destination AS origin_to_destination
+    FROM routes
     ''')
-    
-    def create_route_view(conn):
-        cursor = conn.cursor()
-        cursor.execute('''
-        CREATE VIEW IF NOT EXISTS route_view AS
-        SELECT route_id, origin || ' to ' || destination AS route_name
-        FROM routes
-        ''')
 
+def create_route_view(conn):
+    cursor = conn.cursor()
+    cursor.execute('''
+    CREATE VIEW IF NOT EXISTS route_view AS
+    SELECT route_id, origin || ' to ' || destination AS route_name
+    FROM routes
+    ''')
     conn.commit()
 
 def setup_database():
