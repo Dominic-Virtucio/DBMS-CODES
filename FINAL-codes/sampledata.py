@@ -1,243 +1,144 @@
 import sqlite3
-from datetime import datetime
+from PyQt5 import QtWidgets
+from PyQt5.QtWidgets import QMessageBox, QButtonGroup, QRadioButton, QLabel, QComboBox, QPushButton
 
-DATABASE_NAME = 'transport_app.db'
+class FareCalculatorApp(QtWidgets.QWidget):
+    def __init__(self, db_manager=None):
+        super().__init__()
+        self.db_manager = db_manager
+        self.init_ui()
 
-def insert_sample_data(conn):
-    cursor = conn.cursor()
+    def init_ui(self):
+        self.setWindowTitle("Transport Fare Calculator")
+        self.setGeometry(100, 100, 500, 600)
+        self.setFixedSize(500, 600)
+        self.setStyleSheet("background-color: #E3F2FD;")
+        layout = QtWidgets.QVBoxLayout()
 
-    users_data = [
-        # Admins
-        ('admin1', 'Super', 'Admin', 'admin1@ex.com', 'adminpass1', 'Admin'),
-        ('admin2', 'Alice', 'Director', 'admin2@ex.com', 'adminpass2', 'Admin'),
-        ('admin3', 'Bob', 'Manager', 'admin3@ex.com', 'adminpass3', 'Admin'),
-        ('admin4', 'Carla', 'Supervisor', 'admin4@ex.com', 'adminpass4', 'Admin'),
-        ('admin5', 'David', 'Coordinator', 'admin5@ex.com', 'adminpass5', 'Admin'),
-        
-        # Drivers
-        ('driver1', 'Juan', 'Dela Cruz', 'driver1@ex.com', 'driverpass1', 'Driver'),
-        ('driver2', 'Maria', 'Santos', 'driver2@ex.com', 'driverpass2', 'Driver'),
-        ('driver3', 'Pedro', 'Reyes', 'driver3@ex.com', 'driverpass3', 'Driver'),
-        ('driver4', 'Ana', 'Gonzales', 'driver4@ex.com', 'driverpass4', 'Driver'),
-        ('driver5', 'Lito', 'Mendoza', 'driver5@ex.com', 'driverpass5', 'Driver'),
-        
-        # Commuters
-        ('commuter1', 'John', 'Doe', 'commuter1@ex.com', 'commuterpass1', 'Commuter'),
-        ('commuter2', 'Jane', 'Smith', 'commuter2@ex.com', 'commuterpass2', 'Commuter'),
-        ('commuter3', 'Alice', 'Tan', 'commuter3@ex.com', 'commuterpass3', 'Commuter'),
-        ('commuter4', 'Mark', 'Lim', 'commuter4@ex.com', 'commuterpass4', 'Commuter'),
-        ('commuter5', 'Sarah', 'Wong', 'commuter5@ex.com', 'commuterpass5', 'Commuter'),
-        
-        # Conductors
-        ('conductor1', 'Peter', 'Jones', 'conductor1@ex.com', 'condpass1', 'Conductor'),
-        ('conductor2', 'Carla', 'Lim', 'conductor2@ex.com', 'condpass2', 'Conductor'),
-        ('conductor3', 'Rico', 'Navarro', 'conductor3@ex.com', 'condpass3', 'Conductor'),
-        ('conductor4', 'Lorna', 'Dizon', 'conductor4@ex.com', 'condpass4', 'Conductor'),
-        ('conductor5', 'Ben', 'Parker', 'conductor5@ex.com', 'condpass5', 'Conductor'),
-    ]
-    
-    cursor.executemany(
-        """INSERT INTO users 
-        (username, first_name, last_name, email, password, user_type) 
-        VALUES (?, ?, ?, ?, ?, ?)""",
-        users_data
-    )
-    conn.commit()
-    print("Inserted users")
+        origin_label = QLabel("Select Origin:")
+        origin_label.setStyleSheet("font: bold 10pt 'Segoe UI'; color: #1976D2;")
+        layout.addWidget(origin_label)
+        self.origin_combo = QComboBox()
+        self.origin_combo.setStyleSheet("font: 10pt 'Segoe UI'; background-color: #BBDEFB; color: #1976D2;")
+        self.origin_combo.addItems(self.fetch_origins())
+        layout.addWidget(self.origin_combo)
 
-    user_ids = {}
-    for username in [u[0] for u in users_data]:
-        user_ids[username] = cursor.execute(
-            "SELECT user_id FROM users WHERE username=?", (username,)
-        ).fetchone()[0]
+        destination_label = QLabel("Select Destination:")
+        destination_label.setStyleSheet("font: bold 10pt 'Segoe UI'; color: #1976D2;")
+        layout.addWidget(destination_label)
+        self.destination_combo = QComboBox()
+        self.destination_combo.setStyleSheet("font: 10pt 'Segoe UI'; background-color: #BBDEFB; color: #1976D2;")
+        self.destination_combo.addItems(self.fetch_destinations())
+        layout.addWidget(self.destination_combo)
 
-    # Insert Admins
-    admins_data = [
-        ('A001', user_ids['admin1'], 'System Admin'),
-        ('A002', user_ids['admin2'], 'Operations Manager'),
-        ('A003', user_ids['admin3'], 'HR Supervisor'),
-        ('A004', user_ids['admin4'], 'IT Coordinator'),
-        ('A005', user_ids['admin5'], 'Finance Head'),
-    ]
-    cursor.executemany(
-        "INSERT INTO admins (admin_id, user_id, role) VALUES (?, ?, ?)",
-        admins_data
-    )
-    print("Inserted admins")
+        passenger_label = QLabel("Passenger Type:")
+        passenger_label.setStyleSheet("font: bold 10pt 'Segoe UI'; color: #1976D2;")
+        layout.addWidget(passenger_label)
+        self.passenger_type_group = QButtonGroup(self)
+        self.regular_rb = QRadioButton("Regular")
+        self.student_rb = QRadioButton("Student")
+        self.senior_rb = QRadioButton("Senior")
+        self.pwd_rb = QRadioButton("PWD")
+        for rb in [self.regular_rb, self.student_rb, self.senior_rb, self.pwd_rb]:
+            rb.setStyleSheet("font: 10pt 'Segoe UI'; color: #1976D2;")
+            layout.addWidget(rb)
+            self.passenger_type_group.addButton(rb)
+        self.regular_rb.setChecked(True)
 
-    # Insert Drivers
-    drivers_data = [
-        ('D001', user_ids['driver1'], 1001),
-        ('D002', user_ids['driver2'], 1002),
-        ('D003', user_ids['driver3'], 1003),
-        ('D004', user_ids['driver4'], 1004),
-        ('D005', user_ids['driver5'], 1005),
-    ]
-    cursor.executemany(
-        "INSERT INTO drivers (driver_id, user_id, license_no) VALUES (?, ?, ?)",
-        drivers_data
-    )
-    print("Inserted drivers")
+        calc_button = QPushButton("Calculate Fare")
+        calc_button.setStyleSheet("background-color: #2196F3; color: white; font: bold 12pt 'Segoe UI'; border-radius: 5px; padding: 6px 0;")
+        calc_button.clicked.connect(self.calculate_fare)
+        layout.addWidget(calc_button)
 
-    # Insert Commuters
-    commuters_data = [
-        ('C001', user_ids['commuter1'], '09171234567', 'Student', 1),
-        ('C002', user_ids['commuter2'], '09179876543', 'Senior', 2),
-        ('C003', user_ids['commuter3'], '09221234567', 'PWD', 3),
-        ('C004', user_ids['commuter4'], '09331234567', 'None', 4),
-        ('C005', user_ids['commuter5'], '09441234567', 'Student', 5),
-    ]
-    cursor.executemany(
-        """INSERT INTO commuters 
-        (commuter_id, user_id, contact_no, discount_type, preferred_route) 
-        VALUES (?, ?, ?, ?, ?)""",
-        commuters_data
-    )
-    print("Inserted commuters")
+        self.result_label = QLabel("")
+        self.result_label.setStyleSheet("font: 12pt 'Arial'; color: #1976D2;")
+        layout.addWidget(self.result_label)
+        self.setLayout(layout)
 
-    # Insert Conductors
-    conductors_data = [
-        ('K001', user_ids['conductor1'], 2001),
-        ('K002', user_ids['conductor2'], 2002),
-        ('K003', user_ids['conductor3'], 2003),
-        ('K004', user_ids['conductor4'], 2004),
-        ('K005', user_ids['conductor5'], 2005),
-    ]
-    cursor.executemany(
-        "INSERT INTO conductors (conductor_id, user_id, license_no) VALUES (?, ?, ?)",
-        conductors_data
-    )
-    print("Inserted conductors")
+    def fetch_origins(self):
+        if self.db_manager:
+            origins = self.db_manager.execute_query("SELECT DISTINCT origin FROM routes ORDER BY origin")
+            return [row['origin'] for row in origins] if origins else []
+        else:
+            conn = sqlite3.connect('transport_app.db')
+            cursor = conn.cursor()
+            cursor.execute("SELECT DISTINCT origin FROM routes ORDER BY origin")
+            result = [row[0] for row in cursor.fetchall()]
+            conn.close()
+            return result
 
-    # Insert Vehicles
-    vehicles_data = [
-        ('V001', 'ABC123'),
-        ('V002', 'XYZ789'),
-        ('V003', 'DEF456'),
-        ('V004', 'GHI789'),
-        ('V005', 'JKL012'),
-    ]
-    cursor.executemany(
-        "INSERT INTO vehicles (vehicle_id, plate_no) VALUES (?, ?)",
-        vehicles_data
-    )
-    print("Inserted vehicles")
+    def fetch_destinations(self):
+        if self.db_manager:
+            destinations = self.db_manager.execute_query("SELECT DISTINCT destination FROM routes ORDER BY destination")
+            return [row['destination'] for row in destinations] if destinations else []
+        else:
+            conn = sqlite3.connect('transport_app.db')
+            cursor = conn.cursor()
+            cursor.execute("SELECT DISTINCT destination FROM routes ORDER BY destination")
+            result = [row[0] for row in cursor.fetchall()]
+            conn.close()
+            return result
 
-    # Insert Routes (from original code)
-    routes_data = [
-        ('Antipolo', 'Antipolo', 0), ('Antipolo', 'Cogeo', 6.7), ('Antipolo', 'Penafrancia', 8.7),
-        ('Antipolo', 'Masinag', 10.4), ('Antipolo', 'Cainta', 10.6), ('Antipolo', 'Katipunan', 15.2),
-        ('Antipolo', 'Anonas', 16.7), ('Antipolo', 'T.I.P.', 17.7),
-        ('Cogeo', 'Antipolo', 6.7), ('Cogeo', 'Cogeo', 0), ('Cogeo', 'Penafrancia', 2.7),
-        ('Cogeo', 'Masinag', 5.8), ('Cogeo', 'Cainta', 6.6), ('Cogeo', 'Katipunan', 10.6),
-        ('Cogeo', 'Anonas', 11.5), ('Cogeo', 'T.I.P.', 13.0),
-        ('Penafrancia', 'Antipolo', 8.7), ('Penafrancia', 'Cogeo', 2.7), ('Penafrancia', 'Penafrancia', 0),
-        ('Penafrancia', 'Masinag', 3.1), ('Penafrancia', 'Cainta', 5.8), ('Penafrancia', 'Katipunan', 8.2),
-        ('Penafrancia', 'Anonas', 8.9), ('Penafrancia', 'T.I.P.', 9.3),
-        ('Masinag', 'Antipolo', 10.4), ('Masinag', 'Cogeo', 5.8), ('Masinag', 'Penafrancia', 3.1),
-        ('Masinag', 'Masinag', 0), ('Masinag', 'Cainta', 2.1), ('Masinag', 'Katipunan', 6.0),
-        ('Masinag', 'Anonas', 7.7), ('Masinag', 'T.I.P.', 8.5),
-        ('Cainta', 'Antipolo', 10.6), ('Cainta', 'Cogeo', 6.6), ('Cainta', 'Penafrancia', 5.8),
-        ('Cainta', 'Masinag', 2.1), ('Cainta', 'Cainta', 0), ('Cainta', 'Katipunan', 3.9),
-        ('Cainta', 'Anonas', 5.6), ('Cainta', 'T.I.P.', 6.6),
-        ('Katipunan', 'Antipolo', 15.2), ('Katipunan', 'Cogeo', 10.6), ('Katipunan', 'Penafrancia', 8.2),
-        ('Katipunan', 'Masinag', 6.0), ('Katipunan', 'Cainta', 3.9), ('Katipunan', 'Katipunan', 0),
-        ('Katipunan', 'Anonas', 1.0), ('Katipunan', 'T.I.P.', 1.3),
-        ('Anonas', 'Antipolo', 16.7), ('Anonas', 'Cogeo', 11.5), ('Anonas', 'Penafrancia', 8.9),
-        ('Anonas', 'Masinag', 7.7), ('Anonas', 'Cainta', 5.6), ('Anonas', 'Katipunan', 1.0),
-        ('Anonas', 'Anonas', 0), ('Anonas', 'T.I.P.', 0.4),
-        ('T.I.P.', 'Antipolo', 17.7), ('T.I.P.', 'Cogeo', 13.0), ('T.I.P.', 'Penafrancia', 9.3),
-        ('T.I.P.', 'Masinag', 8.5), ('T.I.P.', 'Cainta', 6.6), ('T.I.P.', 'Katipunan', 1.3),
-        ('T.I.P.', 'Anonas', 0.4), ('T.I.P.', 'T.I.P.', 0)
-    ]
-    cursor.executemany(
-        "INSERT INTO routes (origin, destination, distance) VALUES (?, ?, ?)",
-        routes_data
-    )
-    print("Inserted routes")
+    def calculate_fare(self):
+        origin = self.origin_combo.currentText()
+        destination = self.destination_combo.currentText()
+        if self.regular_rb.isChecked():
+            passenger_type = "Regular"
+        elif self.student_rb.isChecked():
+            passenger_type = "Student"
+        elif self.senior_rb.isChecked():
+            passenger_type = "Senior"
+        elif self.pwd_rb.isChecked():
+            passenger_type = "PWD"
+        else:
+            passenger_type = "Regular"
+        if not origin or not destination:
+            self.show_message("Input Error", "Please select both origin and destination.")
+            return
+        if origin == destination:
+            base_fare = 15.00 if passenger_type == 'Regular' else 12.00
+            self.result_label.setText(
+                f"Origin: {origin}\nDestination: {destination}\nTotal KM: 0\nTotal Fare: {base_fare:.2f} PHP ({passenger_type})"
+            )
+            return
+        if self.db_manager:
+            query = '''
+SELECT r.route_id, r.distance, f.price_fare, f.discount_fare
+FROM routes r
+JOIN fares f ON r.route_id = f.route_id
+WHERE r.origin = ? AND r.destination = ?
+'''
+            res = self.db_manager.execute_query(query, (origin, destination))
+            if not res:
+                self.show_message("Error", "Route not found.")
+                return
+            res = res[0]
+            distance = res['distance']
+            price_fare = res['price_fare']
+            discount_fare = res['discount_fare']
+        else:
+            conn = sqlite3.connect('transport_app.db')
+            cursor = conn.cursor()
+            cursor.execute('''
+SELECT r.route_id, r.distance, f.price_fare, f.discount_fare
+FROM routes r
+JOIN fares f ON r.route_id = f.route_id
+WHERE r.origin = ? AND r.destination = ?
+''', (origin, destination))
+            res = cursor.fetchone()
+            conn.close()
+            if not res:
+                self.show_message("Error", "Route not found.")
+                return
+            _, distance, price_fare, discount_fare = res
+        fare = price_fare if passenger_type == 'Regular' else discount_fare
+        self.result_label.setText(
+            f"Origin: {origin}\nDestination: {destination}\nTotal KM: {distance}\nTotal Fare: {fare:.2f} PHP ({passenger_type})"
+        )
 
-    # Insert Fares (from original code)
-    fares_data = [
-            (1, 15.00, 12.00), (2, 20.94, 16.75), (3, 25.34, 20.27), (4, 29.08, 23.26),
-            (5, 29.52, 23.62), (6, 39.64, 31.71), (7, 42.94, 34.35), (8, 45.14, 36.11),
-            (9, 20.94, 16.75), (10, 15.00, 12.00), (11, 15.00, 12.00), (12, 18.96, 15.17),
-            (13, 20.72, 16.58), (14, 29.52, 23.62), (15, 31.50, 25.20), (16, 34.80, 27.84),
-            (17, 25.34, 20.27), (18, 15.00, 12.00), (19, 15.00, 12.00), (20, 15.00, 12.00),
-            (21, 18.96, 15.17), (22, 24.24, 19.39), (23, 25.78, 20.62), (24, 26.66, 21.33),
-            (25, 29.08, 23.26), (26, 18.96, 15.17), (27, 15.00, 12.00), (28, 15.00, 12.00),
-            (29, 15.00, 12.00), (30, 19.40, 15.52), (31, 23.14, 18.51), (32, 24.90, 19.92),
-            (33, 29.52, 23.62), (34, 20.72, 16.58), (35, 18.96, 15.17), (36, 15.00, 12.00),
-            (37, 15.00, 12.00), (38, 15.00, 12.00), (39, 18.52, 14.82), (40, 20.72, 16.58),
-            (41, 39.64, 31.71), (42, 29.52, 23.62), (43, 24.24, 19.39), (44, 19.40, 15.52),
-            (45, 15.00, 12.00), (46, 15.00, 12.00), (47, 15.00, 12.00), (48, 15.00, 12.00),
-            (49, 42.94, 34.35), (50, 31.50, 25.20), (51, 25.78, 20.62), (52, 23.14, 18.51),
-            (53, 20.72, 16.58), (54, 15.00, 12.00), (55, 15.00, 12.00), (56, 15.00, 12.00),
-            (57, 45.14, 36.11), (58, 34.80, 27.84), (59, 26.66, 21.33), (60, 24.90, 19.92),
-            (61, 20.72, 16.58), (62, 15.00, 12.00), (63, 15.00, 12.00), (64, 15.00, 12.00)
-        ]
-
-    cursor.executemany(
-        "INSERT INTO fares (route_id, price_fare, discount_fare) VALUES (?, ?, ?)",
-        fares_data
-    )
-    print("Inserted fares")
-
-    # Insert Transactions
-    transactions_data = [
-        ('T001', 'C001', 1, 'V001', 'K001', 1, 15.00, '2024-01-01 08:00'),
-        ('T002', 'C002',  2, 'V002', 'K002', 2, 20.94, '2024-01-01 08:15'),
-        ('T003', 'C003',  3, 'V003', 'K003', 3, 25.34, '2024-01-01 08:30'),
-        ('T004', 'C004',  4, 'V004', 'K004', 4, 29.08, '2024-01-01 08:45'),
-        ('T005', 'C005',  5, 'V005', 'K005', 5, 29.52, '2024-01-01 09:00'),
-    ]
-    cursor.executemany(
-        """INSERT INTO transactions 
-        (transaction_id, commuter_id, route_id, vehicle_id, conductor_id, fare_id, total_fare, transaction_date)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-        transactions_data
-    )
-    print("Inserted transactions")
-
-    # Insert Feedbacks
-    feedbacks_data = [
-        ('C001', 'D001', 'K001', 4.5, 'Good service'),
-        ('C002', 'D002', 'K002', 5.0, 'Excellent driver'),
-        ('C003', 'D003', 'K003', 4.0, 'Comfortable ride'),
-        ('C004', 'D004', 'K004', 3.5, 'Slightly late'),
-        ('C005', 'D005', 'K005', 4.2, 'Clean vehicle'),
-    ]
-    cursor.executemany(
-        """INSERT INTO feedbacks 
-        (commuter_id, driver_id, conductor_id, rating, comment)
-        VALUES (?, ?, ?, ?, ?)""",
-        feedbacks_data
-    )
-    print("Inserted feedbacks")
-
-    # Insert Vehicle Assignments
-    assignments_data = [
-        ('V001', 'D001', 'K001', '2024-01-01 07:00'),
-        ('V002', 'D002', 'K002', '2024-01-01 07:15'),
-        ('V003', 'D003', 'K003', '2024-01-01 07:30'),
-        ('V004', 'D004', 'K004', '2024-01-01 07:45'),
-        ('V005', 'D005', 'K005', '2024-01-01 08:00'),
-    ]
-    cursor.executemany(
-        """INSERT INTO vehicle_assignment 
-        (vehicle_id, driver_id, conductor_id, assignment_date)
-        VALUES (?, ?, ?, ?)""",
-        assignments_data
-    )
-    print("Inserted vehicle assignments")
-
-    conn.commit()
-    print("\nAll data inserted successfully!")
-
-if __name__ == '__main__':
-    conn = sqlite3.connect(DATABASE_NAME)
-    try:
-        insert_sample_data(conn)
-    except Exception as e:
-        print(f"Error: {e}")
-    finally:
-        conn.close()
+    def show_message(self, title, message):
+        msg_box = QMessageBox(self)
+        msg_box.setWindowTitle(title)
+        msg_box.setText(message)
+        msg_box.setIcon(QMessageBox.Warning)
+        msg_box.exec_()
